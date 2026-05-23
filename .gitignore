@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.coverage
+.venv/
+venv/
+dist/
+build/
+.DS_Store
+.idea/
+.vscode/
+*.log
+.audit-trail.jsonl

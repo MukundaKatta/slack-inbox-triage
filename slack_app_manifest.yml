@@ -1,0 +1,51 @@
+# Slack App manifest for slack-inbox-triage.
+#
+# Submit to the Slack Marketplace via api.slack.com -> Apps -> Create New App ->
+# From an app manifest. Paste this file.
+#
+# Scopes are intentionally minimal. The agent only asks for what it
+# actually uses. ScopeAllowlist in src/slack_inbox_triage/governance.py
+# refuses any Slack call outside this set, even if a model tries.
+display_information:
+  name: Inbox Triage
+  description: Governed inbox triage for busy Slack workspaces. Classify, label, and draft replies with built-in egress and scope guardrails.
+  background_color: "#2c2d30"
+  long_description: |
+    Inbox Triage reads a channel or DM backlog, classifies each message by intent
+    (recruiter, customer support, internal request, noise), proposes a label, and
+    drafts a reply for you to send or edit.
+
+    Governance is the differentiator. Inbox Triage refuses to call any Slack API
+    outside the OAuth scopes declared in this manifest, even if a model asks it to.
+    It also blocks outbound HTTP to hosts not on the workspace allowlist and writes
+    every governance decision to an append-only audit trail your admins can review.
+
+features:
+  bot_user:
+    display_name: inboxtriage
+    always_online: true
+  slash_commands:
+    - command: /triage
+      description: Triage the current channel and post a drafted summary.
+      usage_hint: "[#channel]"
+      should_escape: true
+oauth_config:
+  scopes:
+    bot:
+      # read what is in the channel we are triaging
+      - channels:history
+      - channels:read
+      # the agent posts the summary back as an ephemeral message
+      - chat:write
+      # reactions are used as lightweight labels
+      - reactions:write
+      # slash command handler
+      - commands
+settings:
+  event_subscriptions:
+    bot_events: []
+  interactivity:
+    is_enabled: true
+  org_deploy_enabled: false
+  socket_mode_enabled: true
+  token_rotation_enabled: false

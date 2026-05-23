@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "slack-inbox-triage"
+version = "0.1.0"
+description = "Slack inbox-triage agent with built-in egress allowlist, tool-arg validation, and structured-output enforcement. Built for the Slack Agent Builder Challenge."
+readme = "README.md"
+authors = [{ name = "Mukunda Katta" }]
+license = { text = "MIT" }
+requires-python = ">=3.10"
+keywords = ["slack", "agent", "triage", "inbox", "governance", "llm"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Communications :: Chat",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.urls]
+Homepage = "https://github.com/MukundaKatta/slack-inbox-triage"
+Repository = "https://github.com/MukundaKatta/slack-inbox-triage"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-ra -q"
