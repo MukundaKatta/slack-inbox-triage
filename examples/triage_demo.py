@@ -4,11 +4,14 @@ Run with:
 
     python examples/triage_demo.py
 
-Three shots:
+Four shots:
     1. /triage on a synthetic channel: classified messages, labels, replies.
-    2. Egress allowlist: a rogue tool tries to call a non-allowlisted host
+    2. Scope allowlist: the agent tries a Slack call (chat.postMessage) whose
+       required scope is not in the granted manifest and gets refused. The
+       denial is recorded in the audit trail.
+    3. Egress allowlist: a rogue tool tries to call a non-allowlisted host
        and gets blocked. The block is recorded in the audit trail.
-    3. Output schema repair: a malformed model response is parsed by
+    4. Output schema repair: a malformed model response is parsed by
        cast_json and used safely.
 
 No real Slack workspace required. No network calls.
@@ -30,6 +33,7 @@ from slack_inbox_triage.governance import (  # noqa: E402
     EgressAllowlist,
     EgressBlocked,
     ScopeAllowlist,
+    ScopeDenied,
 )
 from slack_inbox_triage.slack_client import build_demo_provider  # noqa: E402
 from slack_inbox_triage.triage import TriageAgent  # noqa: E402
@@ -74,10 +78,39 @@ def shot_1_triage_a_channel() -> None:
     )
 
 
+def shot_scope_refusal() -> None:
+    print()
+    print(SECTION)
+    print("Shot 2: agent tries a Slack call outside its granted scopes. Refused.")
+    print(SECTION)
+
+    audit = AuditTrail()
+    # The manifest grants read + reactions, but deliberately NOT chat:write.
+    scope = ScopeAllowlist(
+        granted=["channels:history", "channels:read", "reactions:write"],
+        audit=audit,
+    )
+
+    print("  -> conversations.history (granted channels:history)... ", end="")
+    scope.check("conversations.history")
+    print("OK")
+
+    print("  -> chat.postMessage (needs chat:write, NOT granted)... ", end="")
+    try:
+        scope.check("chat.postMessage")
+    except ScopeDenied as exc:
+        print(f"REFUSED: {exc}")
+
+    print()
+    print("Audit (denied rows):")
+    for ev in audit.blocked():
+        print(f"  - kind={ev.kind!r} detail={json.dumps(ev.detail, sort_keys=True)}")
+
+
 def shot_2_block_rogue_egress() -> None:
     print()
     print(SECTION)
-    print("Shot 2: rogue tool tries to exfil to a non-allowlisted host. Blocked.")
+    print("Shot 3: rogue tool tries to exfil to a non-allowlisted host. Blocked.")
     print(SECTION)
 
     audit = AuditTrail()
@@ -111,7 +144,7 @@ def shot_2_block_rogue_egress() -> None:
 def shot_3_repair_malformed_output() -> None:
     print()
     print(SECTION)
-    print("Shot 3: model returns malformed JSON. Repaired and validated before use.")
+    print("Shot 4: model returns malformed JSON. Repaired and validated before use.")
     print(SECTION)
 
     noisy = (
@@ -135,6 +168,7 @@ def shot_3_repair_malformed_output() -> None:
 
 def main() -> None:
     shot_1_triage_a_channel()
+    shot_scope_refusal()
     shot_2_block_rogue_egress()
     shot_3_repair_malformed_output()
     print()
