@@ -83,7 +83,7 @@ The repo also ships a `TriageScheduler` for workspaces that want a 15-minute hea
 - `src/slack_inbox_triage/slack_client.py` - the `SlackClientProtocol`, the real adapter, and the deterministic `FakeSlackProvider`
 - `src/slack_inbox_triage/classify.py` - intent classifier with LLM repair and tool-arg validation
 - `src/slack_inbox_triage/scheduler.py` - in-process scheduler for periodic triage
-- `tests/` - 35 tests, fully offline, deterministic
+- `tests/` - 53 tests, fully offline, deterministic, standard-library only (`python3 -m unittest discover -s tests`)
 - `examples/triage_demo.py` - 90-second offline demo
 - `slack_app_manifest.yml` - minimal Slack app manifest, ready to paste
 - `docs/DEPLOY.md` - real-workspace deploy guide

@@ -1,4 +1,14 @@
-"""Shared pytest fixtures for slack-inbox-triage tests."""
+"""Optional pytest fixtures for slack-inbox-triage tests.
+
+The suite is written against the standard-library ``unittest`` runner and
+needs no third-party dependency::
+
+    python3 -m unittest discover -s tests
+
+This file is only consulted when the suite is run under pytest, which some
+contributors prefer. It mirrors the builders in ``tests/helpers.py`` as
+fixtures and ensures the ``src`` layout is importable.
+"""
 
 from __future__ import annotations
 

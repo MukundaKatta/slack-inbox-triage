@@ -12,12 +12,76 @@ Built for the [Slack Agent Builder Challenge](https://slackhack.devpost.com/) (S
 
 ## Quickstart
 
+The package has **no runtime dependencies** and the test suite uses only the
+Python standard library, so there is nothing to install to try it:
+
 ```bash
 git clone https://github.com/MukundaKatta/slack-inbox-triage
 cd slack-inbox-triage
-python3 -m pytest -q                  # 35 tests, runs in under a second
-python3 examples/triage_demo.py       # 90-second offline demo, no network
+python3 -m unittest discover -s tests   # 53 tests, runs in under a second
+python3 examples/triage_demo.py         # offline demo, no network
 ```
+
+`pytest` is supported too if you prefer it (`pip install -e ".[dev]" && pytest -q`),
+but it is optional — the suite is written against `unittest` and ships
+fixtures in `tests/conftest.py` for pytest users.
+
+## Library usage
+
+```python
+from slack_inbox_triage import TriageAgent, AuditTrail
+from slack_inbox_triage.governance import ScopeAllowlist
+from slack_inbox_triage.slack_client import build_demo_provider
+
+# Wire a scope guard that mirrors the manifest, then a deterministic
+# offline Slack provider (swap in a real SlackClient in production).
+audit = AuditTrail()
+scope = ScopeAllowlist(
+    granted=["channels:history", "channels:read", "chat:write", "reactions:write"],
+    audit=audit,
+)
+provider = build_demo_provider(scope_gate=scope)
+
+agent = TriageAgent(client=provider, audit=audit)
+result = agent.triage_channel("C_INBOX")
+
+print(result.counts())          # {'recruiter': 2, 'customer_support': 2, ...}
+print(result.to_markdown())     # Slack-friendly report
+
+# Every governance decision is on the audit trail:
+print(len(audit.filter("scope.ok")), "allowed Slack calls")
+print(len(audit.blocked()), "refused calls")
+```
+
+To classify a single message (with or without an LLM):
+
+```python
+from slack_inbox_triage import classify_message, Intent
+
+out = classify_message("the export button is throwing a 500 error")
+assert out.intent is Intent.CUSTOMER_SUPPORT
+
+# Pass any callable as the model. Malformed output is repaired and validated;
+# if it is unsalvageable the deterministic heuristic takes over.
+out = classify_message("...", llm=lambda text: my_model(text))
+```
+
+## API reference
+
+| Symbol | Where | What it is |
+| --- | --- | --- |
+| `TriageAgent` | `triage.py` | Orchestrator: read a channel, classify, draft replies, propose labels. `triage_channel(channel, *, limit, skip_users)` and `post_summary(result, channel)`. |
+| `TriageResult` | `triage.py` | Result of a run. `counts()`, `by_intent(intent)`, `to_dict()`, `to_markdown()`. |
+| `MessageVerdict` | `triage.py` | One classified message plus the suggested label and drafted reply. |
+| `classify_message` | `classify.py` | `classify_message(text, *, llm=None) -> ClassifyOutput`. Heuristic by default; repairs and validates LLM output when `llm` is given. |
+| `Intent` | `classify.py` | Closed enum: `RECRUITER`, `CUSTOMER_SUPPORT`, `INTERNAL_REQUEST`, `NOISE`, `UNKNOWN`. |
+| `validate_tool_args` | `classify.py` | Raises a plain-English `ValueError` for malformed Slack method args. |
+| `ScopeAllowlist` | `governance.py` | `check(method)` raises `ScopeDenied` if the method's required OAuth scope is not granted. |
+| `EgressAllowlist` | `governance.py` | `check(url)` / `wrap(http_call)` raise `EgressBlocked` for non-allowlisted hosts. |
+| `AuditTrail` | `governance.py` | Append-only log. In-memory by default; pass `path=` to also write JSONL. |
+| `SlackClient` | `slack_client.py` | Real adapter around a `call_fn` you provide (no hard `slack-sdk` dependency). |
+| `FakeSlackProvider` | `slack_client.py` | Deterministic offline Slack stand-in for tests and demos. |
+| `TriageScheduler` | `scheduler.py` | Drive the agent on a fixed interval; you inject the clock and sleep. |
 
 ## Governance, at a glance
 
